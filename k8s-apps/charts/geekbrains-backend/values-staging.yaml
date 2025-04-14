@@ -1,0 +1,49 @@
+config:
+  DB_HOST: geekbrains-backend-postgresql
+  DB_NAME: geekbrains-inventory
+  DB_PORT: "5432"
+  DB_USERNAME: app
+  DB_PASSWORD: password
+  WORKER_URL: http://geekbrains-backend-py.geekbrains-backend-py:8080
+
+  REDIS_HOST: "redis-master.redis"
+  REDIS_PASS: "RTKIOQcibQ"
+
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "512m"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod-dns"
+  tls:
+    - hosts:
+        - api-geekbrains.banzai-predict.site
+      secretName: letsencrypt-dns
+  hosts:
+    - host: api-geekbrains.banzai-predict.site
+      paths:
+        - path: /
+          pathType: Prefix
+
+
+postgresql:
+  primary:
+    #    nodeSelector:
+    #      scope: apps
+    #    tolerations:
+    #      - key: "scope"
+    #        operator: "Equal"
+    #        value: "apps"
+    #        effect: "NoSchedule"
+    #      - key: "scope"
+    #        operator: "Equal"
+    #        value: "apps"
+    #        effect: "NoExecute"
+    persistence:
+      enabled: true
+      size: 10Gi
+  auth:
+    database: geekbrains-inventory
+    password: "password"
+    username: "app"

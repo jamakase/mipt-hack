@@ -1,0 +1,65 @@
+name: ML service LLM CI workflow
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'ml/llm/**'
+#      - '.github/workflows/ml-service-llm.yaml'
+    branches:
+      - main
+  pull_request:
+    paths:
+      - 'ml/llm/**'
+permissions:
+  contents: write
+
+jobs:
+  deploy-container:
+    if: github.ref == 'refs/heads/main'
+    #    needs:
+    #      - build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./ml/llm
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v3
+      - run: echo $DOCKER_LOGIN_KEY | docker login --username ru-moscow-1@$DOCKER_LOGIN_USER --password-stdin $DOCKER_IMAGE_REPO_ADDR
+        env:
+          DOCKER_LOGIN_USER: ${{secrets.SBC_ACCESS_KEY}}
+          DOCKER_LOGIN_KEY: ${{secrets.DOCKER_LOGIN_KEY}}
+          DOCKER_IMAGE_REPO_ADDR: swr.ru-moscow-1.hc.sbercloud.ru
+          DOCKER_REGISTRY: geekbrains-lecturer
+      - run: |
+          echo "Packaging docker image ..."
+          image="$DOCKER_IMAGE_REPO_ADDR/$DOCKER_REGISTRY/banzai-ml-llm"
+          tag="$image:${{github.sha}}"
+          latest_tag="$image:latest"
+          docker build . -t $tag -t $latest_tag
+          docker push $image
+        env:
+          DOCKER_IMAGE_REPO_ADDR: swr.ru-moscow-1.hc.sbercloud.ru
+          DOCKER_REGISTRY: geekbrains-lecturer
+
+#  deploy-container-yc:
+#    if: github.ref == 'refs/heads/main'
+##    needs:
+##      - build
+#    runs-on: ubuntu-latest
+#    defaults:
+#      run:
+#        working-directory: ./ml/lecturer
+#    steps:
+#      - name: Clone repository
+#        uses: actions/checkout@v3
+#      - run: echo $YANDEX_AUTH_KEY | docker login --username json_key --password-stdin cr.yandex
+#        env:
+#          YANDEX_AUTH_KEY: ${{ secrets.YANDEX_AUTH_KEY }}
+#      - run: |
+#          echo "Packaging docker image ..."
+#          tag="$DOCKER_REGISTRY/banzai-ml-lecturer:${{ github.sha	}}"
+#          docker build . -t $tag
+#          docker push $tag
+#        env:
+#          DOCKER_REGISTRY: cr.yandex/crprhksud0fqg01g1all

@@ -1,0 +1,27 @@
+{{- range $app, $config := .Values.apps }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd-image-updater.argoproj.io/image-list: {{ $app }}=swr.ru-moscow-1.hc.sbercloud.ru/geekbrains-lecturer/{{ $config.container }}:latest
+    argocd-image-updater.argoproj.io/{{ $app }}.update-strategy: digest
+  name: {{ $app }}
+spec:
+  project: "default"
+  syncPolicy:
+    automated: { }
+    syncOptions:
+      - CreateNamespace=true
+  source:
+    repoURL: {{ $.Values.gitRepo }}
+    targetRevision: HEAD
+    path: k8s-apps/charts/{{ $app }}
+    helm:
+      valueFiles:
+        - values.yaml
+        - values-{{ $.Values.env }}.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: {{ $app }}
+---
+{{- end }}

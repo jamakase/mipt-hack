@@ -1,0 +1,41 @@
+ingress:
+  enabled: false
+#  className: nginx
+#  annotations:
+#    nginx.ingress.kubernetes.io/proxy-body-size: "512m"
+#    cert-manager.io/cluster-issuer: "letsencrypt-prod-dns"
+#  tls:
+#    - hosts:
+#        - api-geekbrains.banzai-predict.site
+#      secretName: letsencrypt-dns
+#  hosts:
+#    - host: api-geekbrains.banzai-predict.site
+#      paths:
+#        - path: /
+#          pathType: Prefix
+
+
+extraEnv:
+  - value: redis://geekbrains-backend-py-redis-headless:6379/0
+    name: CELERY_BROKER_URL
+  - value: redis://geekbrains-backend-py-redis-headless:6379/0
+    name: CELERY_RESULT_BACKEND
+  - value: http://geekbrains-ml-text.geekbrains-ml-text:8080/v1/s2t
+    name: SPEECH_TO_TEXT_MODEL_URL
+  - value: http://geekbrains-ml-text.geekbrains-ml-text:8080/v1/summarization
+    name: SUMMARIZATION_MODEL_URL
+  - value: http://geekbrains-ml-text.geekbrains-ml-text:8080/v1/classification
+    name: CLASSIFICATION_MODEL_URL
+  - value: http://geekbrains-backend.geekbrains-backend:3000
+    name: INVENTORY_SERVICE_URL
+  - value: http://geekbrains-ml-llm.geekbrains-ml-llm:8080
+    name: LLM_URL
+  - value: http://geekbrains-ml-llm.geekbrains-ml-llm:8080/v1/invoke
+    name: LLM_MODEL_URL
+
+redis:
+  metrics:
+    enabled: true
+  architecture: standalone
+  auth:
+    enabled: false

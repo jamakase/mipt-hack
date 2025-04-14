@@ -1,0 +1,73 @@
+extraEnv:
+  - name: MODEL_PATH
+    value: IlyaGusev/saiga_mistral_7b_gguf
+#
+#persistence:
+#  enabled: true
+#  accessMode: ReadWriteOnce
+#  ## Persistent Volume Storage Class
+#  ## If defined, storageClassName: <storageClass>
+#  ## If set to "-", storageClassName: "", which disables dynamic provisioning
+#  ## If undefined (the default) or set to null, no storageClassName spec is
+#  ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+#  ##   GKE, AWS & OpenStack)
+#  ##
+#  # storageClass: "-"
+#  size: 20Gi
+#  annotations: {}
+#  volume:
+#    name: data
+#    mountPath: /models
+
+resources:
+  requests:
+    cpu: 4.0
+    memory: 12Gi
+
+nodeSelector:
+  environment: ml-app
+
+tolerations:
+  - key: "target"
+    operator: "Equal"
+    value: "ml_apps"
+    effect: "NoSchedule"
+  - key: "target"
+    operator: "Equal"
+    value: "ml_apps"
+    effect: "NoExecute"
+
+
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "512m"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod-dns"
+  tls:
+    - hosts:
+        - llm-geekbrains.banzai-predict.site
+      secretName: letsencrypt-dns
+  hosts:
+    - host: llm-geekbrains.banzai-predict.site
+      paths:
+        - path: /
+          pathType: Prefix
+#
+#persistence:
+#  enabled: true
+#  accessMode: ReadWriteOnce
+#  ## Persistent Volume Storage Class
+#  ## If defined, storageClassName: <storageClass>
+#  ## If set to "-", storageClassName: "", which disables dynamic provisioning
+#  ## If undefined (the default) or set to null, no storageClassName spec is
+#  ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+#  ##   GKE, AWS & OpenStack)
+#  ##
+#  # storageClass: "-"
+#  size: 20Gi
+#  annotations: {}
+#  volume:
+#    name: data
+#    mountPath: /models

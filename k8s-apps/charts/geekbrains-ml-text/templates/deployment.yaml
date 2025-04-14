@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "geekbrains-ml-text.fullname" . }}
+  labels:
+    {{- include "geekbrains-ml-text.labels" . | nindent 4 }}
+spec:
+  strategy:
+    type: Recreate
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "geekbrains-ml-text.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "geekbrains-ml-text.selectorLabels" . | nindent 8 }}
+    spec:
+{{/*      initContainers:*/}}
+{{/*        - name: copy*/}}
+{{/*          image: busybox:1.28*/}}
+{{/*          env:*/}}
+{{/*            {{- with .Values.extraEnv }}*/}}
+{{/*              {{- toYaml . | nindent 12 }}*/}}
+{{/*            {{- end }}*/}}
+{{/*          command: [ "/bin/sh", "-c", "wget -q -O tmp_model.zip $MODEL_URL && tar -xzvf tmp_model.zip --strip-components=2 -C models" ]*/}}
+{{/*          {{- if .Values.persistence.enabled }}*/}}
+{{/*          volumeMounts:*/}}
+{{/*            - name: {{ .Values.persistence.volume.name }}*/}}
+{{/*              mountPath: {{ .Values.persistence.volume.mountPath }}*/}}
+{{/*          {{- end }}*/}}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "geekbrains-ml-text.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          env:
+            {{- with .Values.extraEnv }}
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- if .Values.persistence.enabled }}
+          volumeMounts:
+            - name: {{ .Values.persistence.volume.name }}
+              mountPath: {{ .Values.persistence.volume.mountPath }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+{{/*          livenessProbe:*/}}
+{{/*            httpGet:*/}}
+{{/*              path: /health*/}}
+{{/*              port: http*/}}
+{{/*          readinessProbe:*/}}
+{{/*            httpGet:*/}}
+{{/*              path: /health*/}}
+{{/*              port: http*/}}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.persistence.enabled }}
+      volumes:
+        - name: {{ .Values.persistence.volume.name }}
+          persistentVolumeClaim:
+            claimName: {{ include "geekbrains-ml-text.fullname" . }}
+      {{- end }}

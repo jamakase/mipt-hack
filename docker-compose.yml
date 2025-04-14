@@ -1,0 +1,136 @@
+version: '3.9'
+
+services:
+  # app:
+  #   image: swr.ru-moscow-1.hc.sbercloud.ru/geekbrains-lecturer/banzai-frontend:latest
+  #   build:
+  #     context: frontend
+  #   environment:
+  #     API_URL: http://localhost:8080
+  #   ports:
+  #     - 4000:80
+
+  inventory:
+#    image: swr.ru-moscow-1.hc.sbercloud.ru/geekbrains-lecturer/banzai-inventory-service:latest
+    build:
+      context: ./backend/inventory-service
+      dockerfile: Dockerfile
+    ports:
+      - 8080:3000
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_SCHEMA: public
+      DB_NAME: ${DB_NAME}
+      DB_USERNAME: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      WORKER_URL: http://web:8000
+    volumes:
+      - /tmp:/app/uploads
+    depends_on:
+      - db
+#      - rmq
+      - redis
+  ml-llm:
+    #    image: swr.ru-moscow-1.hc.sbercloud.ru/geekbrains-lecturer/banzai-ml-lecturer:latest
+    build:
+      context: ./ml/llm
+    environment:
+      MODEL_PATH: IlyaGusev/saiga_mistral_7b_gguf
+    volumes:
+      - /tmp:/app/uploads
+#      - ${MODEL_DIR}:/app/models
+    ports:
+      - 8084:8080
+
+  ml-mock:
+#    image: swr.ru-moscow-1.hc.sbercloud.ru/geekbrains-lecturer/banzai-ml-lecturer:latest
+    build:
+      context: ./ml/lecturer
+    environment:
+      S2T_PATH: openai/whisper-large-v3
+      SUM_PATH: cointegrated/rut5-base-absum
+      INVENTORY_SERVICE_URL: http://inventory:3000
+#      S2T_PATH: /app/models/s2t
+#      SUM_PATH: /app/models/sum
+      CL_PATH: /app/models/fine-tune-bert
+      FILE_DIR: /app/uploads
+#    volumes:
+#      - /tmp:/app/uploads
+    #      - ${MODEL_DIR}:/app/models
+    ports:
+      - 8083:8080
+
+  web:
+    build: ./backend/py-inventory-service
+    ports:
+      - 8004:8000
+    command: [ "uvicorn","app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    volumes:
+      - ./backend:/usr/src/app
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+
+  worker:
+    build: ./backend/py-inventory-service
+    command: celery -A app.worker.celery worker --loglevel=info
+    volumes:
+      - ./backend:/usr/src/app
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - SPEECH_TO_TEXT_MODEL_URL=http://ml-mock:8080/v1/s2t
+      - SUMMARIZATION_MODEL_URL=http://ml-mock:8080/v1/summarization
+      - CLASSIFICATION_MODEL_URL=http://ml-mock:8080/v1/classification
+      - INVENTORY_SERVICE_URL=http://inventory:3000
+      - LLM_MODEL_URL=http://ml-llm:8080/v1/invoke
+    depends_on:
+      - redis
+
+  flower:
+    build: ./backend/py-inventory-service
+    ports:
+      - 5555:5555
+    command: celery -A app.worker.celery flower --loglevel=info
+    volumes:
+      - ./backend:/usr/src/app
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+
+  db:
+    container_name: inventory
+    image: postgres:15-alpine
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    restart: always
+
+  redis:
+    image: redis:7
+    restart: always
+    ports:
+      - '6379:6379'
+#    volumes:
+#      - ./cache:/data
+    environment:
+      REDIS_PORT: 6379
+
+#  rmq:
+#    image: rabbitmq:3.10.7-management
+#    ports:
+#      - 15672:15672
+#      - 5672:5672
+#    environment:
+#      RABBITMQ_DEFAULT_USER: ${RMQ_USERNAME}
+#      RABBITMQ_DEFAULT_PASS: ${RMQ_PASSWORD}

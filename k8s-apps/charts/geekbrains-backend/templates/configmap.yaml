@@ -1,0 +1,13 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "geekbrains-backend.fullname" . }}
+  labels:
+    {{- include "geekbrains-backend.labels" . | nindent 4 }}
+data:
+  {{- with .Values.config }}
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}

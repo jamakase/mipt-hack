@@ -1,0 +1,18 @@
+redis:
+  metrics:
+    enabled: true
+  master:
+#    tolerations:
+#      - key: "target"
+#        operator: "Equal"
+#        value: "apps"
+#        effect: "NoSchedule"
+#    nodeSelector:
+#      env: apps
+#  requests:
+#    cpu: 1.0
+#    memory: 2Gi
+  architecture: standalone
+  auth:
+    enabled: false
+    password: RTKIOQcibQ

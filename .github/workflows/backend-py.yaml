@@ -1,0 +1,72 @@
+name: Backend Python CI workflow
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'backend/py-inventory-service/**'
+      - '.github/workflows/backend-py.yaml'
+    branches:
+      - main
+  pull_request:
+    paths:
+      - 'backend/py-inventory-service/**'
+#permissions:
+#  contents: write
+#
+jobs:
+  #  build:
+  #    runs-on: ubuntu-latest
+  #    defaults:
+  #      run:
+  #        working-directory: ./backend/service1
+  #    steps:
+  #      - name: Clone repository
+  #        uses: actions/checkout@v3
+  #
+  #      - name: Use Node.js 18.x
+  #        uses: actions/setup-node@v3
+  #        with:
+  #          cache: 'npm'
+  #          node-version: 18.x
+  #          cache-dependency-path: ./backend/service1/package-lock.json
+  #      - run: npm ci
+  #      - name: Build app
+  #        run: npm run build
+
+  deploy-container:
+    if: github.ref == 'refs/heads/main'
+    #    needs:
+    #      - build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend/py-inventory-service
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v3
+      - run: echo $DOCKER_LOGIN_KEY | docker login --username ru-moscow-1@$DOCKER_LOGIN_USER --password-stdin $DOCKER_IMAGE_REPO_ADDR
+        env:
+          DOCKER_LOGIN_USER: ${{secrets.SBC_ACCESS_KEY}}
+          DOCKER_LOGIN_KEY: ${{secrets.DOCKER_LOGIN_KEY}}
+          DOCKER_IMAGE_REPO_ADDR: swr.ru-moscow-1.hc.sbercloud.ru
+          DOCKER_REGISTRY: geekbrains-lecturer
+      - run: |
+          echo "Packaging docker image ..."
+          image="$DOCKER_IMAGE_REPO_ADDR/$DOCKER_REGISTRY/banzai-py-inventory-service"
+          tag="$image:${{github.sha}}"
+          latest_tag="$image:latest"
+          docker build . -t $tag -t $latest_tag
+          docker push $image
+        env:
+          DOCKER_IMAGE_REPO_ADDR: swr.ru-moscow-1.hc.sbercloud.ru
+          DOCKER_REGISTRY: geekbrains-lecturer
+#      - name: Commit report
+#        working-directory: k8s-apps/banzai-service1/
+#        run: |
+#          git pull
+#          echo -e "image: \n  tag: ${{ github.sha }}" > values-production.yaml
+#          git config user.name github-actions
+#          git config user.email github-actions@github.com
+#          git add values-production.yaml
+#          git commit -m "bump backend version"
+#          git push

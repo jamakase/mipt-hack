@@ -1,0 +1,46 @@
+extraEnv:
+  - name: MODEL_URL
+    value: https://storage.yandexcloud.net/geekbrains-models/models_v2.tar.gz
+  - name: INVENTORY_SERVICE_URL
+    value: http://geekbrains-backend.geekbrains-backend:3000
+  - name: S2T_PATH
+    value: /models/s2t
+  - name: SUM_PATH
+    value: /models/sum
+  - name: CL_PATH
+    value: /models/fine-tune-bert
+
+persistence:
+  enabled: true
+  accessMode: ReadWriteOnce
+  ## Persistent Volume Storage Class
+  ## If defined, storageClassName: <storageClass>
+  ## If set to "-", storageClassName: "", which disables dynamic provisioning
+  ## If undefined (the default) or set to null, no storageClassName spec is
+  ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+  ##   GKE, AWS & OpenStack)
+  ##
+  # storageClass: "-"
+  size: 20Gi
+  annotations: {}
+  volume:
+    name: data
+    mountPath: /models
+
+resources:
+  requests:
+    cpu: 4.0
+    memory: 12Gi
+
+nodeSelector:
+  environment: ml-app
+
+tolerations:
+  - key: "target"
+    operator: "Equal"
+    value: "ml_apps"
+    effect: "NoSchedule"
+  - key: "target"
+    operator: "Equal"
+    value: "ml_apps"
+    effect: "NoExecute"

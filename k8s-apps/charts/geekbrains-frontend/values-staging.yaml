@@ -1,0 +1,19 @@
+ingress:
+  enabled: true
+  #  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod-dns"
+    kubernetes.io/ingress.class: nginx
+  tls:
+    - hosts:
+        - geekbrains.banzai-predict.site
+      secretName: letsencrypt-dns
+  hosts:
+    - host: geekbrains.banzai-predict.site
+      paths:
+        - path: /
+          pathType: Prefix
+
+extraEnv:
+  - name: API_URL
+    value: https://api-geekbrains.banzai-predict.site
