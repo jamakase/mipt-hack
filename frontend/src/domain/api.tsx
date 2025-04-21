@@ -12,7 +12,7 @@ export type GlossaryItemPayload = {
   id: string;
   term: string;
   meaning: string;
-  termId: string;
+  termId?: string;
 };
 
 export async function uploadFile(payload: UploadFilePayload) {

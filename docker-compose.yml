@@ -1,14 +1,13 @@
 version: '3.9'
 
 services:
-  # app:
-  #   image: swr.ru-moscow-1.hc.sbercloud.ru/geekbrains-lecturer/banzai-frontend:latest
-  #   build:
-  #     context: frontend
-  #   environment:
-  #     API_URL: http://localhost:8080
-  #   ports:
-  #     - 4000:80
+  app:
+    build:
+      context: frontend
+    environment:
+      API_URL: http://localhost:8080
+    ports:
+      - 4000:80
 
   inventory:
 #    image: swr.ru-moscow-1.hc.sbercloud.ru/geekbrains-lecturer/banzai-inventory-service:latest
@@ -50,26 +49,29 @@ services:
     build:
       context: ./ml/lecturer
     environment:
-      S2T_PATH: openai/whisper-large-v3
+      S2T_PATH: openai/whisper-base
       SUM_PATH: cointegrated/rut5-base-absum
       INVENTORY_SERVICE_URL: http://inventory:3000
 #      S2T_PATH: /app/models/s2t
 #      SUM_PATH: /app/models/sum
       CL_PATH: /app/models/fine-tune-bert
       FILE_DIR: /app/uploads
+    volumes:
+      - ./ml/lecturer:/app
 #    volumes:
 #      - /tmp:/app/uploads
     #      - ${MODEL_DIR}:/app/models
     ports:
       - 8083:8080
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--reload"]
 
   web:
     build: ./backend/py-inventory-service
     ports:
       - 8004:8000
     command: [ "uvicorn","app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
-    volumes:
-      - ./backend:/usr/src/app
+    # volumes:
+    #   - ./backend/py-inventory-service:/app
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
@@ -79,8 +81,8 @@ services:
   worker:
     build: ./backend/py-inventory-service
     command: celery -A app.worker.celery worker --loglevel=info
-    volumes:
-      - ./backend:/usr/src/app
+    # volumes:
+    #   - ./backend/py-inventory-service:/app
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0

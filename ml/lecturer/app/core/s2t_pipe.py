@@ -1,5 +1,5 @@
 import torch
-from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
+from transformers import pipeline
 
 from app.config import S2T_PATH
 
@@ -14,3 +14,4 @@ s2t_pipe = pipeline(
     batch_size=16,
     return_timestamps=True,
     device=device,)
+

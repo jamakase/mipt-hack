@@ -6,8 +6,8 @@ starlette==0.27.0
 SQLAlchemy==2.0.21
 uvicorn==0.23.2
 # core requirements
-torch==2.1.1
-torchaudio==2.1.1
+torch==2.6.0
+torchaudio==2.6.0
 git+https://github.com/huggingface/transformers.git
 datasets[audio]
 numpy==1.26.0

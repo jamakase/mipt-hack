@@ -66,6 +66,6 @@ RUN pip install -r /app/requirements.txt
 
 FROM base
 #
-COPY ./worker.py ./main.py ./app/
+COPY ./worker.py ./main.py ./video_utils.py ./app/
 #
 #CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]

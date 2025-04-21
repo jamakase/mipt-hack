@@ -99,7 +99,11 @@ const UploadPage: React.FC = () => {
                                             
                                         </Box>
                                         : <Dropzone
-                                            acceptTypes={{"audio/mp3": [".mp3"]}}
+                                            acceptTypes={{
+                                                "audio/mp3": [".mp3"],
+                                                "image/webp": [".webp"],
+                                                "video/mp4": [".mp4"]
+                                            }}
                                             onDrop={(acceptedFiles: any[]) => {
                                                 acceptedFiles.forEach((file) => {
                                                     const reader = new FileReader()
@@ -119,7 +123,7 @@ const UploadPage: React.FC = () => {
                                 </Box>
                                 <Box flex={1}>
                                     <p>Добавьте файл с данными.</p>
-                                    <p>Вы можeте добавить только файлы в формате .mp3</p>
+                                    <p>Вы можeте добавить файлы в форматах .mp3, .webp и .mp4</p>
                                     <LoadingButton
                                         type="submit"
                                         loading={send.isLoading}
