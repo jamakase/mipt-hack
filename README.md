@@ -6,22 +6,19 @@ The Lecturer Platform is an integrated system designed to process and analyze ed
 
 ### Local Development with Docker Compose
 
+```
+cp .env.example .env
+```
+
+Добавьте, которые вы собираетесь использовать.
+
+OPENAI_API_KEY=
+OPENAI_BASE_URL=
+OPENAI_MODEL_NAME=
+
 ```bash
 # Build all services
-make build
-
-# Start the application
-make up
-
-# Stop the application
-make down
-```
-
-
-### kubernetes
-```
-helm repo add geekbrains-charts https://storage.yandexcloud.net/geekbrains-charts
-helm install geekbrains-charts geekbrains-charts/geekbrains-lecturer
+make build up
 ```
 
 ## System Components
