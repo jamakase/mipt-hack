@@ -1,7 +1,7 @@
 import React from 'react';
 import {useParams} from "react-router";
 
-import {Box, IconButton, Paper, Tooltip, Typography} from "@mui/material";
+import {Box, IconButton, Paper, Tooltip, Typography, Tabs, Tab} from "@mui/material";
 
 import PageTitle from "../components/PageTitle";
 import {Routes} from "./router";
@@ -18,6 +18,8 @@ import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import AddGlosaryItemForm from "../components/AddGlosaryItemForm";
 import {config} from "../config/config";
 import {styled} from "@mui/material/styles";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface TextChunk {
     id: string;
@@ -25,6 +27,39 @@ interface TextChunk {
     to: number;
     order: number;
     content: string;
+}
+
+interface TabPanelProps {
+    children?: React.ReactNode;
+    index: number;
+    value: number;
+}
+
+function TabPanel(props: TabPanelProps) {
+    const { children, value, index, ...other } = props;
+
+    return (
+        <div
+            role="tabpanel"
+            hidden={value !== index}
+            id={`lecture-tabpanel-${index}`}
+            aria-labelledby={`lecture-tab-${index}`}
+            {...other}
+        >
+            {value === index && (
+                <Box sx={{ p: 3 }}>
+                    {children}
+                </Box>
+            )}
+        </div>
+    );
+}
+
+function a11yProps(index: number) {
+    return {
+        id: `lecture-tab-${index}`,
+        'aria-controls': `lecture-tabpanel-${index}`,
+    };
 }
 
 const TextChunk = styled(Box)(({theme}) => ({
@@ -38,6 +73,7 @@ const TextChunk = styled(Box)(({theme}) => ({
 const LecturePage: React.FC = () => {
     const [hasAddForm, setHasAddForm] = React.useState(false);
     const [currentTime, setCurrentTime] = React.useState<number>(0);
+    const [tabValue, setTabValue] = React.useState(0);
 
     const {id = ""} = useParams();
 
@@ -49,6 +85,10 @@ const LecturePage: React.FC = () => {
         setCurrentTime(audioRef?.current?.currentTime);
     }, 5000);
 
+    const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+        setTabValue(newValue);
+    };
+
     const text = React.useMemo<string>(() => {
         const onTextClick = (chunk: TextChunk): void => {
             if (audioRef?.current?.currentTime !== undefined) {
@@ -57,7 +97,6 @@ const LecturePage: React.FC = () => {
             }
         }
 
-        /* return lecture?.textChunks?.reduce((acc: string, t: { content: string }) => acc + t.content, "");*/
         return lecture?.textChunks?.map((chunk: TextChunk) => (
                 <TextChunk
                     component="span"
@@ -88,22 +127,12 @@ const LecturePage: React.FC = () => {
     }
 
     const data = lecture;
-
-    // DATA NOT FROM API ! ! !
     const glosary = lecture.glossary;
 
     return (
         <>
             <Head title={`Лекция "${data.lectureName}"`}/>
             <Box sx={{display: 'flex'}}>
-                <SideBlock
-                    anchor="left"
-                >
-                    <PageTitle>
-                        Содержание:
-                    </PageTitle>
-                  {data.summarizedDescription}
-                </SideBlock>
                 <Box component="main" sx={{flexGrow: 1}}>
                     <BackLink to={Routes.ROOT}>
                         назад к лекциям
@@ -120,20 +149,34 @@ const LecturePage: React.FC = () => {
                         />
                     </Box>
 
-                    <Paper
-                        sx={{p: 8, minHeight: "200px", display: "flex"}} variant="outlined"
-                    >
-                        {
-                            text?.length > 0
-                                ? <Typography paragraph align="justify" m={0}>
-                                    {text}
-                                </Typography>
-                                : <Box sx={{ alignSelf: "center", margin: "0 auto" }}>
-                                    <CircularProgress size="30px" />
-                                </Box>
-
-                        }
-                    </Paper>
+                    <Box sx={{ width: '100%' }}>
+                        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                            <Tabs value={tabValue} onChange={handleTabChange} aria-label="lecture tabs">
+                                <Tab label="Содержание" {...a11yProps(0)} />
+                                <Tab label="Текст лекции" {...a11yProps(1)} />
+                            </Tabs>
+                        </Box>
+                        <TabPanel value={tabValue} index={0}>
+                            <Paper sx={{ p: 4 }} variant="outlined">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                    {data.summarizedDescription}
+                                </ReactMarkdown>
+                            </Paper>
+                        </TabPanel>
+                        <TabPanel value={tabValue} index={1}>
+                            <Paper sx={{p: 4, minHeight: "200px", display: "flex"}} variant="outlined">
+                                {
+                                    text?.length > 0
+                                        ? <Typography paragraph align="justify" m={0}>
+                                            {text}
+                                        </Typography>
+                                        : <Box sx={{ alignSelf: "center", margin: "0 auto" }}>
+                                            <CircularProgress size="30px" />
+                                        </Box>
+                                }
+                            </Paper>
+                        </TabPanel>
+                    </Box>
                 </Box>
                 <SideBlock
                     anchor="right"

@@ -4,6 +4,7 @@ import requests
 
 from celery import Celery
 from celery import chain, group, chord
+from .text_utils import summarize_lecture_with_timings
 
 celery = Celery(__name__)
 celery.conf.broker_url = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379")
@@ -19,8 +20,8 @@ llm_promt = os.environ.get("LLM_MODEL_PROMT", 'Найди одно слово, �
 @celery.task(name="create_task")
 def create_task(lecture_id, file_path):
     print(f'Creating tasks for lecture {lecture_id} file {file_path}...')
-    group_task = group(save_chunks.s(), terms.s(), llm.s(), summ.s())
-    chain(s2t.s(lecture_id, file_path), group_task, dummy_task.si()).delay()
+    group_task = group(save_chunks.s(), terms.s(), summ.s())
+    chain(s2t.s(lecture_id, file_path), group_task).delay()
     print("task 1")
     return True
 
@@ -46,16 +47,28 @@ def summ(result):
     chunks = result['chunks']
     lecture_id = result['lecture_id']
     print(f'sending summarize request...')
-    response = requests.post(summarize_model_url, json={'text': "".join([chunk['text'] for chunk in chunks])})
-    if (response.status_code == 200):
-        summ_text = response.json()['result']
-        response = requests.post(inventory_service_url + f'/inventory/lecture/{lecture_id}/summ_feedback',
-                                 json={'sum': summ_text})
-        # if response.status_code == 200:
-        #     raise Exception(f'inventory service responded with wrong code')
-        return summ_text
-    else:
-        raise Exception(f's2t model responded with wrong code')
+    # Join all chunk texts into a single string for summarization
+    combined_chunks = ""
+    for chunk in chunks:
+        # Extract text from each chunk and append to the combined string
+        text = chunk.get('text', '')
+        combined_chunks += text
+    text = summarize_lecture_with_timings(combined_chunks)
+    
+    # Ensure text is always a string
+    if not isinstance(text, str):
+        if isinstance(text, list):
+            text = '\n\n'.join(text)
+        else:
+            text = str(text)
+    
+    body = {'sum': text}
+    print(f'sending summarize request... {body}')
+    response = requests.post(inventory_service_url + f'/inventory/lecture/{lecture_id}/summ_feedback',
+                                 json=body)
+    if response.status_code != 200:
+        raise Exception(f'inventory service responded with wrong code {response.status_code}')
+    return text
 
 
 @celery.task(name="terms")
@@ -76,10 +89,12 @@ def terms(result):
             else:
                 print(f'Llm model responded with wrong code. Using default term {term}')
                 real_terms.append({'term': term, 'meaning': term})
-        requests.post(inventory_service_url + f'/inventory/lecture/{lecture_id}/class_feedback', json=real_terms)
+        response = requests.post(inventory_service_url + f'/inventory/lecture/{lecture_id}/class_feedback', json=real_terms)
+        if response.status_code != 200:
+            raise Exception(f'inventory service responded with wrong code')
         return terms
     else:
-        raise Exception(f's2t model responded with wrong code')
+        raise Exception(f'classification model responded with wrong code')
 
 
 @celery.task(name="save_chunks")
@@ -89,18 +104,6 @@ def save_chunks(result):
     print(f'saving chunks {chunks} for lecture {lecture_id}')
     response = requests.post(inventory_service_url + f'/inventory/lecture/{lecture_id}/text-chunks', json=[
         {"content": chunk['text'], "from": chunk['timestamp'][0], "to": chunk['timestamp'][1]} for chunk in chunks])
-    if response.status_code == 200:
+    if response.status_code != 200:
         raise Exception(f'inventory service responded with wrong code')
     return
-
-
-@celery.task(name="llm")
-def llm(value):
-    print(f'llm {value}')
-    time.sleep(1)
-    return
-
-
-@celery.task
-def dummy_task():
-    return 'I am a dummy task'

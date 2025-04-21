@@ -10,3 +10,6 @@ librosa==0.10.0
 soundfile==0.12.1
 pydub==0.25.1
 validators==0.20.0
+langchain==0.3.23
+langchain-openai
+langgraph

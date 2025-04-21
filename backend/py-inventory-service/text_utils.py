@@ -1,5 +1,5 @@
 import os
-from typing import TypedDict, List, Dict, Tuple, Union, Literal
+from typing import TypedDict
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START, END
 
@@ -46,7 +46,7 @@ class LectureSummarizer:
             model=os.getenv("OPENAI_MODEL_NAME"),
             temperature=0,
             base_url=os.getenv("OPENAI_BASE_URL"),
-            api_key='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',
+            api_key=os.getenv("OPENAI_API_KEY"),
         )
         
         # Создание графа
@@ -130,13 +130,13 @@ class LectureSummarizer:
         
         Пример оглавления:
         ```markdown
-        # Общественное движение в России во второй четверти XIX века
+        # Основные философские течения в современном обществе
         
         ## Оглавление
-        1. [Консерватизм (0:21)](#консерватизм)
-        2. [Либерализм: славянофилы (1:37)](#либерализм-славянофилы)
-        3. [Либерализм: западники (3:33)](#либерализм-западники)
-        4. [Радикальные кружки (5:04)](#радикальные-кружки)
+        1. [Традиционализм (0:21)](#традиционализм)
+        2. [Умеренный прогрессивизм: национальная школа (1:37)](#умеренный-прогрессивизм-национальная-школа)
+        3. [Умеренный прогрессивизм: глобальная школа (3:33)](#умеренный-прогрессивизм-глобальная-школа)
+        4. [Революционные движения (5:04)](#революционные-движения)
         ```
         
         Верните ТОЛЬКО Markdown без комментариев.
@@ -192,12 +192,28 @@ class LectureSummarizer:
             chunks = chunk_text(lecture_data, max_chunk_size)
             structured_chunks = [(chunk, None) for chunk in chunks]
         elif isinstance(lecture_data, dict):
-            structured_chunks = list(lecture_data.items())
+            if 'chunks' in lecture_data and isinstance(lecture_data['chunks'], list):
+                # Обработка формата {'chunks': [{'timestamp': [...], 'text': ...}]}
+                structured_chunks = []
+                for chunk in lecture_data['chunks']:
+                    if 'timestamp' in chunk and 'text' in chunk:
+                        # Если text - это словарь с timestamp и text внутри
+                        if isinstance(chunk['text'], dict) and 'text' in chunk['text']:
+                            structured_chunks.append((chunk['text']['text'], str(chunk['timestamp'])))
+                        else:
+                            structured_chunks.append((chunk['text'], str(chunk['timestamp'])))
+            else:
+                structured_chunks = list(lecture_data.items())
         elif isinstance(lecture_data, list) and all(isinstance(item, tuple) for item in lecture_data):
             structured_chunks = lecture_data
+        elif isinstance(lecture_data, list) and all(isinstance(item, dict) for item in lecture_data):
+            # Обработка списка словарей [{'timestamp': [...], 'text': ...}]
+            structured_chunks = []
+            for chunk in lecture_data:
+                if 'timestamp' in chunk and 'text' in chunk:
+                    structured_chunks.append((chunk['text'], str(chunk['timestamp'])))
         else:
             raise ValueError("Неверный формат данных лекции")
-        
         # Если только одна часть
         if len(structured_chunks) == 1:
             text, timing = structured_chunks[0]
