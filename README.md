@@ -43,3 +43,8 @@ The system includes:
 - LLM capabilities for natural language processing
 - Asynchronous task processing with Celery
 - Data storage with PostgreSQL and Redis
+
+
+UI example
+
+![image](image.png)
